@@ -1,0 +1,39 @@
+name: Skill improvement
+description: Suggest a task type, prompt rule, anti-pattern, or example improvement.
+title: "[skill]: "
+labels:
+  - skill
+  - improvement
+body:
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Skill
+      options:
+        - codex-prompt
+        - retro-distill
+        - examples
+        - repo docs/tooling
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or failure mode
+      description: What agent behavior should this prevent or improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Include the new rule, example, or template adjustment.
+    validations:
+      required: true
+  - type: checkboxes
+    id: neutrality
+    attributes:
+      label: Project-neutral check
+      options:
+        - label: This report does not include private codebase names, customer data, secrets, or internal paths.
+          required: true

@@ -9,6 +9,7 @@ A package of OpenAI Codex skills (`SKILL.md` files under `skills/`) that generat
 ## Layout
 
 - `skills/<name>/SKILL.md` – a skill (Agent Skills standard: `name` + `description` frontmatter + Markdown body). `codex-prompt` also has `references/`.
+- `skills/<name>/agents/openai.yaml` – optional Codex app metadata validated by `scripts/validate_skills.py`.
 - `examples/<task-type>-example.md` – one worked prompt per task type, on the fictional "Acme Notes" project.
 - `scripts/validate_skills.py` – frontmatter linter (stdlib only).
 - `.github/workflows/validate-skills.yml` – runs the linter on every push/PR.
@@ -19,7 +20,7 @@ A package of OpenAI Codex skills (`SKILL.md` files under `skills/`) that generat
 python scripts/validate_skills.py
 ```
 
-Exit code 0 means every `SKILL.md` has valid frontmatter (`name` kebab = dir, `description` 20–1024 chars, `metadata.version` semver). CI enforces this; do not merge red.
+Exit code 0 means every `SKILL.md` has valid frontmatter (`name` kebab = dir, `description` 20–1024 chars, `metadata.version` semver) and every present `agents/openai.yaml` matches the skill. CI enforces this; do not merge red.
 
 ## Conventions
 

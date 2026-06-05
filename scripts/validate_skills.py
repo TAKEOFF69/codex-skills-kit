@@ -9,6 +9,7 @@ Checks per skill:
   - `name` is present, kebab-case, and equals the directory name
   - `description` is present and 20..1024 characters
   - `metadata.version` is present and valid semver (MAJOR.MINOR.PATCH)
+  - optional agents/openai.yaml has required UI metadata and invokes the right skill
 
 Exit code 0 if all skills pass, 1 otherwise.
 """
@@ -24,6 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = ROOT / "skills"
 
 DESC_MIN, DESC_MAX = 20, 1024
+SHORT_DESC_MIN, SHORT_DESC_MAX = 25, 64
 
 
 def _clean(value: str) -> str:
@@ -110,6 +112,68 @@ def validate_skill(skill_dir: Path) -> list[str]:
         errors.append(
             f"{name_expected}: `metadata.version` ('{version}') is not semver MAJOR.MINOR.PATCH"
         )
+
+    errors.extend(validate_openai_yaml(skill_dir))
+    return errors
+
+
+def parse_openai_yaml(text: str) -> dict[str, str]:
+    """Parse the small agents/openai.yaml subset this repo uses."""
+    out: dict[str, str] = {}
+    section = ""
+    for raw in text.splitlines():
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        indented = raw[0] in (" ", "\t")
+        if not indented:
+            key, sep, value = raw.partition(":")
+            if not sep:
+                continue
+            section = key.strip()
+            if value.strip():
+                out[section] = _clean(value)
+        elif section and ":" in raw:
+            key, _, value = raw.partition(":")
+            out[f"{section}.{key.strip()}"] = _clean(value)
+    return out
+
+
+def validate_openai_yaml(skill_dir: Path) -> list[str]:
+    errors: list[str] = []
+    metadata_file = skill_dir / "agents" / "openai.yaml"
+    if not metadata_file.exists():
+        return errors
+
+    data = parse_openai_yaml(metadata_file.read_text(encoding="utf-8"))
+    prefix = f"{skill_dir.name}/agents/openai.yaml"
+
+    display_name = data.get("interface.display_name", "")
+    short_description = data.get("interface.short_description", "")
+    default_prompt = data.get("interface.default_prompt", "")
+    brand_color = data.get("interface.brand_color", "")
+    implicit = data.get("policy.allow_implicit_invocation", "")
+
+    if not display_name:
+        errors.append(f"{prefix}: missing `interface.display_name`")
+
+    if not short_description:
+        errors.append(f"{prefix}: missing `interface.short_description`")
+    elif not (SHORT_DESC_MIN <= len(short_description) <= SHORT_DESC_MAX):
+        errors.append(
+            f"{prefix}: `interface.short_description` length {len(short_description)} "
+            f"outside [{SHORT_DESC_MIN}, {SHORT_DESC_MAX}]"
+        )
+
+    if not default_prompt:
+        errors.append(f"{prefix}: missing `interface.default_prompt`")
+    elif f"${skill_dir.name}" not in default_prompt:
+        errors.append(f"{prefix}: `interface.default_prompt` must mention `${skill_dir.name}`")
+
+    if brand_color and not re.match(r"^#[0-9A-Fa-f]{6}$", brand_color):
+        errors.append(f"{prefix}: `interface.brand_color` must be a 6-digit hex color")
+
+    if implicit and implicit not in {"true", "false"}:
+        errors.append(f"{prefix}: `policy.allow_implicit_invocation` must be true or false")
 
     return errors
 

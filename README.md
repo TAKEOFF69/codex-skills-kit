@@ -63,6 +63,8 @@ cp -r codex-skills-kit/skills/codex-prompt .agents/skills/
 
 > Portable by design: these are standard `SKILL.md` skills, so they also load in any other Agent-Skills-compatible agent without modification.
 
+**Distribution status:** this repo currently publishes source-level skill folders that `$skill-installer` can install from GitHub tree URLs. OpenAI's Codex docs recommend plugins as the distribution unit for reusable public skill bundles; plugin packaging is the next natural step if this kit grows beyond direct skill installs.
+
 ---
 
 ## Use
@@ -84,13 +86,16 @@ codex-skills-kit/
 ├── skills/
 │   ├── codex-prompt/          # flagship – 6 task types + 2 reference files
 │   │   ├── SKILL.md
+│   │   ├── agents/openai.yaml # Codex app metadata
 │   │   └── references/
 │   │       ├── anti-patterns.md
 │   │       └── prompt-templates.md
 │   └── retro-distill/         # the self-improvement loop
-│       └── SKILL.md
+│       ├── SKILL.md
+│       └── agents/openai.yaml
 ├── examples/                  # one worked prompt per task type
 ├── scripts/validate_skills.py # frontmatter linter (run in CI)
+├── CHANGELOG.md
 └── .github/workflows/         # CI: validates every SKILL.md
 ```
 

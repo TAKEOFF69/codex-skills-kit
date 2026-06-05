@@ -10,12 +10,13 @@ Thanks for helping make agent delegation less of a guessing game. Contributions 
 
 ## Skill format
 
-Every skill is a directory under `skills/` containing a `SKILL.md` built on the open [Agent Skills](https://agent-skills.com) standard:
+Every skill is a directory under `skills/` containing a `SKILL.md` built on the open [Agent Skills](https://agentskills.io) standard:
 
 ```
 skills/
   your-skill-name/
     SKILL.md            # required
+    agents/openai.yaml  # recommended – Codex app metadata
     references/         # optional – deep-dive docs loaded on demand
     scripts/            # optional – helper scripts
 ```
@@ -37,6 +38,7 @@ Rules enforced by CI (`scripts/validate_skills.py`):
 - `name` present, kebab-case, and equal to the directory name.
 - `description` present, between 20 and 1024 characters.
 - `metadata.version` present and valid semver (`MAJOR.MINOR.PATCH`).
+- If `agents/openai.yaml` exists, it includes `interface.display_name`, a 25..64 character `interface.short_description`, a `default_prompt` that mentions `$your-skill-name`, a valid hex `brand_color`, and a boolean `policy.allow_implicit_invocation`.
 
 Run the validator locally before opening a PR:
 

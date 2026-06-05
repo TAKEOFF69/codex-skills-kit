@@ -1,0 +1,8 @@
+interface:
+  display_name: "Retro Distill"
+  short_description: "Turn completed sessions into skill updates"
+  brand_color: "#7C3AED"
+  default_prompt: "Use $retro-distill to run a quick retrospective and update the right artifacts."
+
+policy:
+  allow_implicit_invocation: true
