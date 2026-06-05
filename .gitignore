@@ -1,0 +1,21 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node (if an installer package is added later)
+node_modules/
+npm-debug.log*
+
+# Scratch audit artifact (never publish)
+AUDIT-REPORT.md
