@@ -8,6 +8,8 @@ A package of OpenAI Codex skills (`SKILL.md` files under `skills/`) that generat
 
 ## Layout
 
+- `.codex-plugin/plugin.json` – plugin manifest bundling the repo's skills.
+- `.agents/plugins/marketplace.json` – repo marketplace catalog that points at the root plugin.
 - `skills/<name>/SKILL.md` – a skill (Agent Skills standard: `name` + `description` frontmatter + Markdown body). `codex-prompt` also has `references/`.
 - `skills/<name>/agents/openai.yaml` – optional Codex app metadata validated by `scripts/validate_skills.py`.
 - `examples/<task-type>-example.md` – one worked prompt per task type, on the fictional "Acme Notes" project.
@@ -20,7 +22,7 @@ A package of OpenAI Codex skills (`SKILL.md` files under `skills/`) that generat
 python scripts/validate_skills.py
 ```
 
-Exit code 0 means every `SKILL.md` has valid frontmatter (`name` kebab = dir, `description` 20–1024 chars, `metadata.version` semver) and every present `agents/openai.yaml` matches the skill. CI enforces this; do not merge red.
+Exit code 0 means every `SKILL.md` has valid frontmatter (`name` kebab = dir, `description` 20–1024 chars, `metadata.version` semver), every present `agents/openai.yaml` matches the skill, and the plugin/marketplace metadata is coherent. CI enforces this; do not merge red.
 
 ## Conventions
 

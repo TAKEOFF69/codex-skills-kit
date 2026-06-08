@@ -1,11 +1,12 @@
 # Changelog
 
-## 0.1.1 - Unreleased
+## 0.1.1 - 2026-06-08
 
 - Added Codex app metadata for bundled skills.
 - Added PR and issue templates for skill changes.
 - Extended validation to check `agents/openai.yaml` drift.
-- Clarified distribution status in the README.
+- Added Codex plugin packaging and a repo marketplace catalog.
+- Clarified plugin and direct-skill install paths in the README.
 
 ## 0.1.0 - 2026-06-05
 

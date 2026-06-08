@@ -39,6 +39,8 @@ Rules enforced by CI (`scripts/validate_skills.py`):
 - `description` present, between 20 and 1024 characters.
 - `metadata.version` present and valid semver (`MAJOR.MINOR.PATCH`).
 - If `agents/openai.yaml` exists, it includes `interface.display_name`, a 25..64 character `interface.short_description`, a `default_prompt` that mentions `$your-skill-name`, a valid hex `brand_color`, and a boolean `policy.allow_implicit_invocation`.
+- If `.codex-plugin/plugin.json` exists, it points at `./skills/`, uses strict semver, and includes required plugin interface metadata.
+- If `.agents/plugins/marketplace.json` exists, it exposes the root plugin as `codex-skills-kit` with an available local marketplace entry.
 
 Run the validator locally before opening a PR:
 
@@ -58,6 +60,7 @@ Drop a Markdown file in `examples/` named `<task-type>-example.md`. It must:
 
 - One logical change per PR.
 - Update the README task-type table if you add a task type.
+- Update `.codex-plugin/plugin.json` and `CHANGELOG.md` when public plugin packaging changes.
 - CI must be green (frontmatter validation).
 
 By contributing, you agree your contributions are licensed under MIT (code) and CC BY 4.0 (content), matching the repository.

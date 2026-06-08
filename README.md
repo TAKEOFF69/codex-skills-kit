@@ -39,7 +39,25 @@ See [`examples/`](./examples/) for a full worked prompt per task type, on a sing
 
 ## Install (OpenAI Codex)
 
-Codex Skills use the open [Agent Skills](https://developers.openai.com/codex/skills) standard. Install either skill straight from this repo.
+Codex Skills use the open [Agent Skills](https://developers.openai.com/codex/skills) standard. The recommended install path is the plugin package, which bundles both skills together.
+
+### Install as a plugin
+
+Add this repo as a Codex plugin marketplace:
+
+```bash
+codex plugin marketplace add TAKEOFF69/codex-skills-kit
+```
+
+Then open the plugin directory with `/plugins`, switch to the **Codex Skills Kit** marketplace, and install **Codex Skills Kit**. Start a new thread after installation so Codex picks up the bundled skills.
+
+For a local clone, use the clone path instead:
+
+```bash
+codex plugin marketplace add ./path/to/codex-skills-kit
+```
+
+### Install individual skills
 
 **Inside Codex** – the built-in installer accepts a GitHub tree URL:
 
@@ -63,8 +81,6 @@ cp -r codex-skills-kit/skills/codex-prompt .agents/skills/
 
 > Portable by design: these are standard `SKILL.md` skills, so they also load in any other Agent-Skills-compatible agent without modification.
 
-**Distribution status:** this repo currently publishes source-level skill folders that `$skill-installer` can install from GitHub tree URLs. OpenAI's Codex docs recommend plugins as the distribution unit for reusable public skill bundles; plugin packaging is the next natural step if this kit grows beyond direct skill installs.
-
 ---
 
 ## Use
@@ -82,6 +98,8 @@ The skill then interviews the task, picks the scaffold, and emits a prompt you c
 
 ```
 codex-skills-kit/
+├── .codex-plugin/plugin.json  # Codex plugin manifest
+├── .agents/plugins/           # marketplace catalog for plugin install
 ├── AGENTS.md                  # repo conventions Codex reads automatically
 ├── skills/
 │   ├── codex-prompt/          # flagship – 6 task types + 2 reference files
@@ -94,9 +112,9 @@ codex-skills-kit/
 │       ├── SKILL.md
 │       └── agents/openai.yaml
 ├── examples/                  # one worked prompt per task type
-├── scripts/validate_skills.py # frontmatter linter (run in CI)
+├── scripts/validate_skills.py # skill + plugin validator (run in CI)
 ├── CHANGELOG.md
-└── .github/workflows/         # CI: validates every SKILL.md
+└── .github/workflows/         # CI: validates skills + plugin metadata
 ```
 
 ### codex-prompt task types
@@ -126,7 +144,7 @@ A few load-bearing principles:
 
 ## Contributing
 
-New task types, anti-patterns, and worked examples are welcome. Every `SKILL.md` must pass the frontmatter validator (`python scripts/validate_skills.py`), which CI enforces on every PR. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the skill schema and conventions, and [AGENTS.md](./AGENTS.md) for the repo conventions Codex itself reads.
+New task types, anti-patterns, and worked examples are welcome. Every `SKILL.md`, `agents/openai.yaml`, and plugin manifest change must pass the validator (`python scripts/validate_skills.py`), which CI enforces on every PR. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the skill schema and conventions, and [AGENTS.md](./AGENTS.md) for the repo conventions Codex itself reads.
 
 ## License
 

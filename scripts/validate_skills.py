@@ -15,6 +15,7 @@ Exit code 0 if all skills pass, 1 otherwise.
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -23,6 +24,8 @@ KEBAB = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = ROOT / "skills"
+PLUGIN_JSON = ROOT / ".codex-plugin" / "plugin.json"
+MARKETPLACE_JSON = ROOT / ".agents" / "plugins" / "marketplace.json"
 
 DESC_MIN, DESC_MAX = 20, 1024
 SHORT_DESC_MIN, SHORT_DESC_MAX = 25, 64
@@ -178,6 +181,111 @@ def validate_openai_yaml(skill_dir: Path) -> list[str]:
     return errors
 
 
+def validate_plugin_manifest() -> list[str]:
+    errors: list[str] = []
+    if not PLUGIN_JSON.exists():
+        return errors
+
+    try:
+        data = json.loads(PLUGIN_JSON.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [f".codex-plugin/plugin.json: invalid JSON: {exc}"]
+
+    name = data.get("name", "")
+    version = data.get("version", "")
+    skills_path = data.get("skills", "")
+    interface = data.get("interface", {})
+    author = data.get("author", {})
+
+    if name != "codex-skills-kit":
+        errors.append(".codex-plugin/plugin.json: `name` must be codex-skills-kit")
+    if not SEMVER.match(version):
+        errors.append(".codex-plugin/plugin.json: `version` must be semver MAJOR.MINOR.PATCH")
+    if not data.get("description"):
+        errors.append(".codex-plugin/plugin.json: missing `description`")
+    if not author.get("name"):
+        errors.append(".codex-plugin/plugin.json: missing `author.name`")
+    if skills_path != "./skills/":
+        errors.append(".codex-plugin/plugin.json: `skills` must be ./skills/")
+    elif not (ROOT / "skills").is_dir():
+        errors.append(".codex-plugin/plugin.json: `skills` path does not exist")
+
+    required_interface = [
+        "displayName",
+        "shortDescription",
+        "longDescription",
+        "developerName",
+        "category",
+        "defaultPrompt",
+        "brandColor",
+    ]
+    for key in required_interface:
+        if key not in interface:
+            errors.append(f".codex-plugin/plugin.json: missing `interface.{key}`")
+
+    if interface.get("brandColor") and not re.match(r"^#[0-9A-Fa-f]{6}$", interface["brandColor"]):
+        errors.append(".codex-plugin/plugin.json: `interface.brandColor` must be a 6-digit hex color")
+
+    prompts = interface.get("defaultPrompt", [])
+    if not isinstance(prompts, list) or not prompts:
+        errors.append(".codex-plugin/plugin.json: `interface.defaultPrompt` must be a non-empty list")
+    else:
+        if len(prompts) > 3:
+            errors.append(".codex-plugin/plugin.json: `interface.defaultPrompt` must contain at most 3 entries")
+        for prompt in prompts:
+            if not isinstance(prompt, str) or len(prompt) > 128:
+                errors.append(
+                    ".codex-plugin/plugin.json: each `interface.defaultPrompt` entry must be a string <= 128 chars"
+                )
+
+    for key in ("homepage", "repository"):
+        value = data.get(key, "")
+        if value and not value.startswith("https://"):
+            errors.append(f".codex-plugin/plugin.json: `{key}` must be an https:// URL")
+
+    return errors
+
+
+def validate_marketplace() -> list[str]:
+    errors: list[str] = []
+    if not MARKETPLACE_JSON.exists():
+        return errors
+
+    try:
+        data = json.loads(MARKETPLACE_JSON.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [f".agents/plugins/marketplace.json: invalid JSON: {exc}"]
+
+    if data.get("name") != "codex-skills-kit":
+        errors.append(".agents/plugins/marketplace.json: `name` must be codex-skills-kit")
+
+    plugins = data.get("plugins", [])
+    if not isinstance(plugins, list) or len(plugins) != 1:
+        errors.append(".agents/plugins/marketplace.json: must contain exactly one plugin entry")
+        return errors
+
+    plugin = plugins[0]
+    source = plugin.get("source", {})
+    policy = plugin.get("policy", {})
+
+    if plugin.get("name") != "codex-skills-kit":
+        errors.append(".agents/plugins/marketplace.json: plugin `name` must be codex-skills-kit")
+    if source.get("source") != "local":
+        errors.append(".agents/plugins/marketplace.json: plugin `source.source` must be local")
+    if source.get("path") != "./":
+        errors.append(".agents/plugins/marketplace.json: plugin `source.path` must be ./")
+    if policy.get("installation") != "AVAILABLE":
+        errors.append(".agents/plugins/marketplace.json: plugin `policy.installation` must be AVAILABLE")
+    if policy.get("authentication") != "ON_INSTALL":
+        errors.append(".agents/plugins/marketplace.json: plugin `policy.authentication` must be ON_INSTALL")
+    if plugin.get("category") != "Productivity":
+        errors.append(".agents/plugins/marketplace.json: plugin `category` must be Productivity")
+    if not PLUGIN_JSON.exists():
+        errors.append(".agents/plugins/marketplace.json: source path points at repo root but plugin.json is missing")
+
+    return errors
+
+
 def main() -> int:
     if not SKILLS_DIR.is_dir():
         print(f"error: skills directory not found at {SKILLS_DIR}", file=sys.stderr)
@@ -195,13 +303,21 @@ def main() -> int:
         print(f"[{status}] {skill_dir.name}")
         all_errors.extend(errs)
 
+    plugin_errors = validate_plugin_manifest()
+    print(f"[{'FAIL' if plugin_errors else 'PASS'}] plugin manifest")
+    all_errors.extend(plugin_errors)
+
+    marketplace_errors = validate_marketplace()
+    print(f"[{'FAIL' if marketplace_errors else 'PASS'}] marketplace")
+    all_errors.extend(marketplace_errors)
+
     if all_errors:
         print(f"\n{len(all_errors)} problem(s) found:\n", file=sys.stderr)
         for e in all_errors:
             print(f"  - {e}", file=sys.stderr)
         return 1
 
-    print(f"\nAll {len(skill_dirs)} skill(s) valid.")
+    print(f"\nAll {len(skill_dirs)} skill(s) and plugin metadata valid.")
     return 0
 
 

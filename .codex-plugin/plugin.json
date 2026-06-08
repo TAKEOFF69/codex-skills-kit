@@ -1,0 +1,36 @@
+{
+  "name": "codex-skills-kit",
+  "version": "0.1.1",
+  "description": "Task-typed prompt-engineering skills for delegating work to OpenAI Codex.",
+  "author": {
+    "name": "TAKEOFF69",
+    "url": "https://github.com/TAKEOFF69"
+  },
+  "homepage": "https://github.com/TAKEOFF69/codex-skills-kit#readme",
+  "repository": "https://github.com/TAKEOFF69/codex-skills-kit",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "codex",
+    "openai-codex",
+    "prompt-engineering",
+    "developer-tools"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Skills Kit",
+    "shortDescription": "Task prompts and retrospectives for Codex",
+    "longDescription": "Codex Skills Kit bundles two reusable Agent Skills: codex-prompt for generating self-contained Codex task prompts, and retro-distill for turning completed sessions into durable skill and convention updates.",
+    "developerName": "TAKEOFF69",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills"
+    ],
+    "websiteURL": "https://github.com/TAKEOFF69/codex-skills-kit",
+    "defaultPrompt": [
+      "Use $codex-prompt to draft a Codex task prompt.",
+      "Use $retro-distill to run a quick retrospective."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

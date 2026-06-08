@@ -1,0 +1,20 @@
+{
+  "name": "codex-skills-kit",
+  "interface": {
+    "displayName": "Codex Skills Kit"
+  },
+  "plugins": [
+    {
+      "name": "codex-skills-kit",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
