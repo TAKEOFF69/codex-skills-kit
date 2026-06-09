@@ -7,6 +7,8 @@
 - [ ] `python scripts/validate_skills.py`
 - [ ] README updated if install, task-type, or public positioning changed
 - [ ] Examples updated if a task scaffold changed
+- [ ] `task-types.json` updated if a task type, scaffold, or fixture changed
+- [ ] Golden prompt fixtures updated if required blocks or task scaffolds changed
 - [ ] `.codex-plugin/plugin.json` updated if plugin packaging changed
 - [ ] `CHANGELOG.md` updated for user-visible changes
 

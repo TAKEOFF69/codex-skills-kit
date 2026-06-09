@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""Validate the frontmatter of every SKILL.md under skills/.
+"""Validate skills, plugin metadata, and prompt content fixtures.
 
 Pure standard library – no third-party deps, so CI stays trivial.
 
-Checks per skill:
+Checks:
   - SKILL.md exists in each skills/<dir>/ directory
   - frontmatter block is present and well-formed (opens and closes with '---')
   - `name` is present, kebab-case, and equals the directory name
   - `description` is present and 20..1024 characters
   - `metadata.version` is present and valid semver (MAJOR.MINOR.PATCH)
   - optional agents/openai.yaml has required UI metadata and invokes the right skill
+  - task-types.json points at existing examples and golden prompt fixtures
+  - codex-prompt registry entries match the skill body and prompt templates
+  - golden prompts contain the universal spine plus task-specific blocks
+  - relative Markdown links point at files or directories that exist
 
 Exit code 0 if all skills pass, 1 otherwise.
 """
@@ -18,7 +22,9 @@ from __future__ import annotations
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import unquote
 
 KEBAB = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
@@ -26,9 +32,21 @@ ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = ROOT / "skills"
 PLUGIN_JSON = ROOT / ".codex-plugin" / "plugin.json"
 MARKETPLACE_JSON = ROOT / ".agents" / "plugins" / "marketplace.json"
+TASK_TYPES_JSON = ROOT / "task-types.json"
+README_MD = ROOT / "README.md"
+CODEX_PROMPT_SKILL = SKILLS_DIR / "codex-prompt" / "SKILL.md"
+PROMPT_TEMPLATES = SKILLS_DIR / "codex-prompt" / "references" / "prompt-templates.md"
 
 DESC_MIN, DESC_MAX = 20, 1024
 SHORT_DESC_MIN, SHORT_DESC_MAX = 25, 64
+LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+
+
+@dataclass(frozen=True)
+class RegistryDocs:
+    readme: str
+    skill: str
+    templates: str
 
 
 def _clean(value: str) -> str:
@@ -286,6 +304,196 @@ def validate_marketplace() -> list[str]:
     return errors
 
 
+def _read_required(path: Path, errors: list[str], label: str) -> str:
+    if not path.exists():
+        errors.append(f"{label}: missing at {path.relative_to(ROOT).as_posix()}")
+        return ""
+    return path.read_text(encoding="utf-8")
+
+
+def _repo_relative_path(raw_path: str, prefix: str, errors: list[str]) -> Path | None:
+    if not isinstance(raw_path, str) or not raw_path:
+        errors.append(f"{prefix}: path must be a non-empty string")
+        return None
+    path = Path(raw_path)
+    if path.is_absolute():
+        errors.append(f"{prefix}: path must be relative to the repo root")
+        return None
+
+    target = (ROOT / path).resolve()
+    try:
+        target.relative_to(ROOT.resolve())
+    except ValueError:
+        errors.append(f"{prefix}: path must stay inside the repo root")
+        return None
+    return target
+
+
+def _require_substrings(text: str, required: list[str], prefix: str) -> list[str]:
+    return [f"{prefix}: missing required block `{block}`" for block in required if block not in text]
+
+
+def validate_task_type_registry() -> list[str]:
+    errors: list[str] = []
+    if not TASK_TYPES_JSON.exists():
+        return ["task-types.json: missing task-type registry"]
+
+    try:
+        data = json.loads(TASK_TYPES_JSON.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [f"task-types.json: invalid JSON: {exc}"]
+
+    if data.get("schemaVersion") != 1:
+        errors.append("task-types.json: `schemaVersion` must be 1")
+    if data.get("skill") != "codex-prompt":
+        errors.append("task-types.json: `skill` must be codex-prompt")
+
+    global_blocks = data.get("globalRequiredBlocks", [])
+    if not isinstance(global_blocks, list) or not all(isinstance(block, str) and block for block in global_blocks):
+        errors.append("task-types.json: `globalRequiredBlocks` must be a list of non-empty strings")
+        global_blocks = []
+
+    task_types = data.get("taskTypes", [])
+    if not isinstance(task_types, list) or not task_types:
+        errors.append("task-types.json: `taskTypes` must be a non-empty list")
+        return errors
+
+    docs = RegistryDocs(
+        readme=_read_required(README_MD, errors, "README.md"),
+        skill=_read_required(CODEX_PROMPT_SKILL, errors, "skills/codex-prompt/SKILL.md"),
+        templates=_read_required(PROMPT_TEMPLATES, errors, "skills/codex-prompt/references/prompt-templates.md"),
+    )
+
+    seen_ids: set[str] = set()
+    seen_golden_paths: set[Path] = set()
+    display_names: list[str] = []
+
+    for index, task in enumerate(task_types, start=1):
+        prefix = f"task-types.json taskTypes[{index}]"
+        if not isinstance(task, dict):
+            errors.append(f"{prefix}: entry must be an object")
+            continue
+
+        task_id = task.get("id", "")
+        display_name = task.get("displayName", "")
+        skill_section = task.get("skillSection", "")
+        template_sections = task.get("templateSections", [])
+        required_blocks = task.get("requiredBlocks", [])
+
+        if not isinstance(task_id, str) or not KEBAB.match(task_id):
+            errors.append(f"{prefix}: `id` must be kebab-case")
+        elif task_id in seen_ids:
+            errors.append(f"{prefix}: duplicate id `{task_id}`")
+        else:
+            seen_ids.add(task_id)
+
+        if not isinstance(display_name, str) or not display_name:
+            errors.append(f"{prefix}: `displayName` must be a non-empty string")
+        else:
+            display_names.append(display_name)
+
+        if not isinstance(skill_section, str) or not skill_section.startswith("### "):
+            errors.append(f"{prefix}: `skillSection` must be a level-3 Markdown heading")
+        elif docs.skill and skill_section not in docs.skill:
+            errors.append(f"{prefix}: skill section `{skill_section}` not found in codex-prompt SKILL.md")
+
+        if not isinstance(template_sections, list) or not template_sections:
+            errors.append(f"{prefix}: `templateSections` must be a non-empty list")
+        else:
+            for heading in template_sections:
+                if not isinstance(heading, str) or not heading.startswith("## "):
+                    errors.append(f"{prefix}: template heading `{heading}` must be a level-2 Markdown heading")
+                elif docs.templates and heading not in docs.templates:
+                    errors.append(f"{prefix}: template heading `{heading}` not found in prompt-templates.md")
+
+        if not isinstance(required_blocks, list) or not all(
+            isinstance(block, str) and block for block in required_blocks
+        ):
+            errors.append(f"{prefix}: `requiredBlocks` must be a list of non-empty strings")
+            required_blocks = []
+
+        example_path = _repo_relative_path(task.get("examplePath", ""), f"{prefix} examplePath", errors)
+        if example_path is not None:
+            if not example_path.exists():
+                errors.append(f"{prefix}: examplePath `{task.get('examplePath')}` does not exist")
+            else:
+                example_text = example_path.read_text(encoding="utf-8")
+                if "## The generated prompt" not in example_text:
+                    errors.append(
+                        f"{prefix}: example `{task.get('examplePath')}` must include `## The generated prompt`"
+                    )
+
+        golden_path = _repo_relative_path(task.get("goldenPath", ""), f"{prefix} goldenPath", errors)
+        if golden_path is not None:
+            if not golden_path.exists():
+                errors.append(f"{prefix}: goldenPath `{task.get('goldenPath')}` does not exist")
+            else:
+                seen_golden_paths.add(golden_path)
+                golden_text = golden_path.read_text(encoding="utf-8")
+                errors.extend(_require_substrings(golden_text, global_blocks, f"{prefix} goldenPath"))
+                errors.extend(_require_substrings(golden_text, required_blocks, f"{prefix} goldenPath"))
+
+    if docs.readme and display_names:
+        table_row = "| " + " | ".join(display_names) + " |"
+        if table_row not in docs.readme:
+            errors.append("README.md: codex-prompt task-type table is out of sync with task-types.json")
+
+    golden_dir = ROOT / "fixtures" / "golden-prompts"
+    if not golden_dir.is_dir():
+        errors.append("fixtures/golden-prompts: missing golden prompt fixture directory")
+    else:
+        for path in sorted(golden_dir.glob("*.md")):
+            if path.resolve() not in seen_golden_paths:
+                errors.append(
+                    f"fixtures/golden-prompts/{path.name}: fixture is not referenced by task-types.json"
+                )
+
+    return errors
+
+
+def _markdown_files() -> list[Path]:
+    return sorted(
+        path
+        for path in ROOT.rglob("*.md")
+        if ".git" not in path.parts and path.is_file()
+    )
+
+
+def _extract_link_target(raw_target: str) -> str:
+    target = raw_target.strip()
+    if target.startswith("<") and ">" in target:
+        return target[1 : target.index(">")]
+    return target.split()[0] if target else ""
+
+
+def validate_markdown_links() -> list[str]:
+    errors: list[str] = []
+    for md_file in _markdown_files():
+        text = md_file.read_text(encoding="utf-8")
+        rel_file = md_file.relative_to(ROOT).as_posix()
+        for match in LINK_RE.finditer(text):
+            target = _extract_link_target(match.group(1))
+            if not target:
+                continue
+            if target.startswith("#") or re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+                continue
+
+            path_part = target.split("#", 1)[0].split("?", 1)[0]
+            if not path_part:
+                continue
+
+            path_part = unquote(path_part)
+            if path_part.startswith("/"):
+                candidate = ROOT / path_part.lstrip("/")
+            else:
+                candidate = md_file.parent / path_part
+
+            if not candidate.exists():
+                errors.append(f"{rel_file}: broken relative link `{target}`")
+
+    return errors
+
+
 def main() -> int:
     if not SKILLS_DIR.is_dir():
         print(f"error: skills directory not found at {SKILLS_DIR}", file=sys.stderr)
@@ -311,13 +519,21 @@ def main() -> int:
     print(f"[{'FAIL' if marketplace_errors else 'PASS'}] marketplace")
     all_errors.extend(marketplace_errors)
 
+    registry_errors = validate_task_type_registry()
+    print(f"[{'FAIL' if registry_errors else 'PASS'}] task type registry")
+    all_errors.extend(registry_errors)
+
+    markdown_link_errors = validate_markdown_links()
+    print(f"[{'FAIL' if markdown_link_errors else 'PASS'}] markdown links")
+    all_errors.extend(markdown_link_errors)
+
     if all_errors:
         print(f"\n{len(all_errors)} problem(s) found:\n", file=sys.stderr)
         for e in all_errors:
             print(f"  - {e}", file=sys.stderr)
         return 1
 
-    print(f"\nAll {len(skill_dirs)} skill(s) and plugin metadata valid.")
+    print(f"\nAll {len(skill_dirs)} skill(s), plugin metadata, registry, and links valid.")
     return 0
 
 

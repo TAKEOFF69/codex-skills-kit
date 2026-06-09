@@ -35,6 +35,8 @@ Stop when: {explicit stop condition}
 
 See [`examples/`](./examples/) for a full worked prompt per task type, on a single fictional project (Acme Notes), so you can read the shape before you adopt it.
 
+The task-type contract is now checked in as [`task-types.json`](./task-types.json). It maps each supported task type to its skill section, prompt-template section, worked example, and golden prompt fixture under [`fixtures/golden-prompts/`](./fixtures/golden-prompts/). CI uses that registry to catch drift between the methodology docs and the prompts users actually copy.
+
 ---
 
 ## Install (OpenAI Codex)
@@ -112,9 +114,11 @@ codex-skills-kit/
 │       ├── SKILL.md
 │       └── agents/openai.yaml
 ├── examples/                  # one worked prompt per task type
-├── scripts/validate_skills.py # skill + plugin validator (run in CI)
+├── fixtures/golden-prompts/   # compact canonical prompt fixtures for CI
+├── task-types.json            # task registry: skill sections, templates, examples
+├── scripts/validate_skills.py # skill + plugin + content validator (run in CI)
 ├── CHANGELOG.md
-└── .github/workflows/         # CI: validates skills + plugin metadata
+└── .github/workflows/         # CI: validates skills, fixtures, links, metadata
 ```
 
 ### codex-prompt task types
@@ -144,11 +148,11 @@ A few load-bearing principles:
 
 ## Contributing
 
-New task types, anti-patterns, and worked examples are welcome. Every `SKILL.md`, `agents/openai.yaml`, and plugin manifest change must pass the validator (`python scripts/validate_skills.py`), which CI enforces on every PR. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the skill schema and conventions, and [AGENTS.md](./AGENTS.md) for the repo conventions Codex itself reads.
+New task types, anti-patterns, and worked examples are welcome. Every `SKILL.md`, `agents/openai.yaml`, plugin manifest, task registry, and fixture change must pass the validator (`python scripts/validate_skills.py`), which CI enforces on every PR. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the skill schema and conventions, and [AGENTS.md](./AGENTS.md) for the repo conventions Codex itself reads.
 
 ## License
 
 - **Code / scripts:** [MIT](./LICENSE)
-- **Skill + prompt content** (`skills/`, `examples/`): [CC BY 4.0](./LICENSE-CONTENT)
+- **Skill + prompt content** (`skills/`, `examples/`, `fixtures/`): [CC BY 4.0](./LICENSE-CONTENT)
 
 Use it, fork it, adapt it to your stack. Attribution appreciated.

@@ -17,5 +17,5 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate every SKILL.md frontmatter
+      - name: Validate skills, registry, fixtures, and links
         run: python scripts/validate_skills.py

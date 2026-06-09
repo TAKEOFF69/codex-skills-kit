@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 - 2026-06-09
+
+- Added `task-types.json` as the source-of-truth registry for `codex-prompt` task scaffolds.
+- Added golden prompt fixtures for every supported task type.
+- Extended validation to check registry drift, golden fixture required blocks, and relative Markdown links.
+- Updated contributor docs and PR checklist for task-type and fixture changes.
+
 ## 0.1.1 - 2026-06-08
 
 - Added Codex app metadata for bundled skills.

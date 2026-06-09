@@ -1,6 +1,6 @@
 {
   "name": "codex-skills-kit",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Task-typed prompt-engineering skills for delegating work to OpenAI Codex.",
   "author": {
     "name": "TAKEOFF69",

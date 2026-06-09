@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "skill": "codex-prompt",
+  "globalRequiredBlocks": [
+    "Goal:",
+    "Success means:",
+    "Stop when:",
+    "> Mode:",
+    "> Reasoning:",
+    "> Verification level:",
+    "## Context",
+    "## Read these files FIRST",
+    "## Assumptions",
+    "## Invariant",
+    "## Risk Gate",
+    "## Repo mismatch stop condition",
+    "## Not in scope",
+    "## Constraints",
+    "## Done when"
+  ],
+  "taskTypes": [
+    {
+      "id": "fix",
+      "displayName": "Fix",
+      "skillSection": "### Fix",
+      "templateSections": [
+        "## Fix – Minimal-diagnosis",
+        "## Fix – Hybrid",
+        "## Fix – Investigative"
+      ],
+      "examplePath": "examples/fix-example.md",
+      "goldenPath": "fixtures/golden-prompts/fix.md",
+      "requiredBlocks": [
+        "## Reproduction",
+        "## Phase B – Codex diagnosis",
+        "grep for siblings"
+      ]
+    },
+    {
+      "id": "build",
+      "displayName": "Build",
+      "skillSection": "### Build",
+      "templateSections": [
+        "## Build"
+      ],
+      "examplePath": "examples/build-example.md",
+      "goldenPath": "fixtures/golden-prompts/build.md",
+      "requiredBlocks": [
+        "## Phase A",
+        "## Phase B",
+        "## Phase C",
+        "observable"
+      ]
+    },
+    {
+      "id": "ops-tuning",
+      "displayName": "Ops/Tuning",
+      "skillSection": "### Ops / Tuning",
+      "templateSections": [
+        "## Ops / Tuning"
+      ],
+      "examplePath": "examples/ops-tuning-example.md",
+      "goldenPath": "fixtures/golden-prompts/ops-tuning.md",
+      "requiredBlocks": [
+        "## Live baseline",
+        "## Report before/after",
+        "rollback"
+      ]
+    },
+    {
+      "id": "audit",
+      "displayName": "Audit",
+      "skillSection": "### Audit",
+      "templateSections": [
+        "## Audit"
+      ],
+      "examplePath": "examples/audit-example.md",
+      "goldenPath": "fixtures/golden-prompts/audit.md",
+      "requiredBlocks": [
+        "DO NOT edit",
+        "PASS",
+        "FAIL",
+        "HEAD"
+      ]
+    },
+    {
+      "id": "refactor",
+      "displayName": "Refactor",
+      "skillSection": "### Refactor",
+      "templateSections": [
+        "## Refactor",
+        "## Cross-Layer Refactor"
+      ],
+      "examplePath": "examples/refactor-example.md",
+      "goldenPath": "fixtures/golden-prompts/refactor.md",
+      "requiredBlocks": [
+        "Behavior unchanged",
+        "## Current structure",
+        "## Target structure",
+        "rg -n"
+      ]
+    },
+    {
+      "id": "pr-series",
+      "displayName": "PR-series",
+      "skillSection": "### PR-series",
+      "templateSections": [
+        "## PR-Series"
+      ],
+      "examplePath": "examples/pr-series-example.md",
+      "goldenPath": "fixtures/golden-prompts/pr-series.md",
+      "requiredBlocks": [
+        "## PR Overview",
+        "Depends on",
+        "This PR ONLY",
+        "skip + continue"
+      ]
+    }
+  ]
+}
