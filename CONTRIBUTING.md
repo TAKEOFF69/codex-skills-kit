@@ -43,7 +43,9 @@ Rules enforced by CI (`scripts/validate_skills.py`):
 - If `.agents/plugins/marketplace.json` exists, it exposes the root plugin as `codex-skills-kit` with an available local marketplace entry.
 - `task-types.json` stays in sync with the `codex-prompt` skill body, `references/prompt-templates.md`, worked examples, and golden prompt fixtures.
 - Every golden prompt fixture contains the universal prompt spine plus the task-specific required blocks from `task-types.json`.
-- Relative Markdown links point at files or directories that exist.
+- Relative Markdown links point at files, directories, and heading anchors that exist.
+- `.codex-plugin/plugin.json` version has a matching latest release heading in `CHANGELOG.md`.
+- Committed text files do not contain common GitHub/OpenAI token or private-key patterns.
 
 Run the validator locally before opening a PR:
 
@@ -71,6 +73,6 @@ If you add or rename a `codex-prompt` task type, update `task-types.json` in the
 - One logical change per PR.
 - Update the README task-type table, `task-types.json`, the worked example, and the golden fixture if you add or change a task type.
 - Update `.codex-plugin/plugin.json` and `CHANGELOG.md` when public plugin packaging changes.
-- CI must be green (skill, plugin, registry, fixture, and link validation).
+- CI must be green (skill, plugin, registry, fixture, release metadata, link/anchor, and secret-pattern validation).
 
 By contributing, you agree your code contributions are licensed under MIT and skill, example, and fixture content is licensed under CC BY 4.0, matching the repository.

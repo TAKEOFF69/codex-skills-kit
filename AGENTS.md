@@ -24,7 +24,7 @@ A package of OpenAI Codex skills (`SKILL.md` files under `skills/`) that generat
 python scripts/validate_skills.py
 ```
 
-Exit code 0 means every `SKILL.md` has valid frontmatter (`name` kebab = dir, `description` 20–1024 chars, `metadata.version` semver), every present `agents/openai.yaml` matches the skill, the plugin/marketplace metadata is coherent, `task-types.json` matches the prompt docs, golden fixtures contain their required blocks, and relative Markdown links resolve. CI enforces this; do not merge red.
+Exit code 0 means every `SKILL.md` has valid frontmatter (`name` kebab = dir, `description` 20–1024 chars, `metadata.version` semver), every present `agents/openai.yaml` matches the skill, the plugin/marketplace metadata is coherent, `task-types.json` matches the prompt docs, golden fixtures contain their required blocks, relative Markdown links and anchors resolve, plugin version matches the latest changelog release, and no common token/private-key pattern is committed. CI enforces this; do not merge red.
 
 ## Conventions
 

@@ -34,12 +34,28 @@ PLUGIN_JSON = ROOT / ".codex-plugin" / "plugin.json"
 MARKETPLACE_JSON = ROOT / ".agents" / "plugins" / "marketplace.json"
 TASK_TYPES_JSON = ROOT / "task-types.json"
 README_MD = ROOT / "README.md"
+CHANGELOG_MD = ROOT / "CHANGELOG.md"
 CODEX_PROMPT_SKILL = SKILLS_DIR / "codex-prompt" / "SKILL.md"
 PROMPT_TEMPLATES = SKILLS_DIR / "codex-prompt" / "references" / "prompt-templates.md"
 
 DESC_MIN, DESC_MAX = 20, 1024
 SHORT_DESC_MIN, SHORT_DESC_MAX = 25, 64
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
+SECRET_PATTERNS = [
+    re.compile(r"github_pat_[A-Za-z0-9_]+"),
+    re.compile(r"gh[opsu]_[A-Za-z0-9_]+"),
+    re.compile(r"sk-[A-Za-z0-9_-]{32,}"),
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+]
+TEXT_SUFFIXES = {
+    ".json",
+    ".md",
+    ".py",
+    ".txt",
+    ".yml",
+    ".yaml",
+}
 
 
 @dataclass(frozen=True)
@@ -304,6 +320,33 @@ def validate_marketplace() -> list[str]:
     return errors
 
 
+def validate_release_metadata() -> list[str]:
+    errors: list[str] = []
+    if not PLUGIN_JSON.exists() or not CHANGELOG_MD.exists():
+        return errors
+
+    try:
+        plugin = json.loads(PLUGIN_JSON.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [f".codex-plugin/plugin.json: invalid JSON while checking release metadata: {exc}"]
+
+    version = plugin.get("version", "")
+    if not isinstance(version, str) or not SEMVER.match(version):
+        return errors
+
+    changelog = CHANGELOG_MD.read_text(encoding="utf-8")
+    if f"## {version} - " not in changelog:
+        errors.append(f"CHANGELOG.md: missing release heading for plugin version {version}")
+
+    release_headings = re.findall(r"^##\s+(\d+\.\d+\.\d+)\s+-\s+", changelog, flags=re.MULTILINE)
+    if release_headings and release_headings[0] != version:
+        errors.append(
+            f"CHANGELOG.md: latest release heading {release_headings[0]} does not match plugin version {version}"
+        )
+
+    return errors
+
+
 def _read_required(path: Path, errors: list[str], label: str) -> str:
     if not path.exists():
         errors.append(f"{label}: missing at {path.relative_to(ROOT).as_posix()}")
@@ -466,8 +509,34 @@ def _extract_link_target(raw_target: str) -> str:
     return target.split()[0] if target else ""
 
 
+def _github_anchor_slug(heading: str) -> str:
+    text = re.sub(r"`([^`]*)`", r"\1", heading)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = text.strip().lower()
+    text = re.sub(r"[^\w\- ]+", "", text, flags=re.UNICODE)
+    text = re.sub(r"\s+", "-", text)
+    return text.strip("-")
+
+
+def _markdown_anchors(path: Path) -> set[str]:
+    anchors: set[str] = set()
+    counts: dict[str, int] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = HEADING_RE.match(line)
+        if not match:
+            continue
+        slug = _github_anchor_slug(match.group(2))
+        if not slug:
+            continue
+        duplicate_count = counts.get(slug, 0)
+        counts[slug] = duplicate_count + 1
+        anchors.add(slug if duplicate_count == 0 else f"{slug}-{duplicate_count}")
+    return anchors
+
+
 def validate_markdown_links() -> list[str]:
     errors: list[str] = []
+    anchor_cache: dict[Path, set[str]] = {}
     for md_file in _markdown_files():
         text = md_file.read_text(encoding="utf-8")
         rel_file = md_file.relative_to(ROOT).as_posix()
@@ -475,22 +544,46 @@ def validate_markdown_links() -> list[str]:
             target = _extract_link_target(match.group(1))
             if not target:
                 continue
-            if target.startswith("#") or re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+            if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
                 continue
 
             path_part = target.split("#", 1)[0].split("?", 1)[0]
-            if not path_part:
-                continue
+            fragment = target.split("#", 1)[1].split("?", 1)[0] if "#" in target else ""
 
             path_part = unquote(path_part)
-            if path_part.startswith("/"):
+            if not path_part:
+                candidate = md_file
+            elif path_part.startswith("/"):
                 candidate = ROOT / path_part.lstrip("/")
             else:
                 candidate = md_file.parent / path_part
 
             if not candidate.exists():
                 errors.append(f"{rel_file}: broken relative link `{target}`")
+                continue
 
+            if fragment and candidate.suffix.lower() == ".md":
+                fragment = unquote(fragment).lower()
+                anchors = anchor_cache.setdefault(candidate, _markdown_anchors(candidate))
+                if fragment not in anchors:
+                    errors.append(f"{rel_file}: broken heading anchor `{target}`")
+
+    return errors
+
+
+def validate_no_secrets() -> list[str]:
+    errors: list[str] = []
+    for path in ROOT.rglob("*"):
+        if ".git" in path.parts or not path.is_file() or path.suffix not in TEXT_SUFFIXES:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for pattern in SECRET_PATTERNS:
+            if pattern.search(text):
+                errors.append(f"{path.relative_to(ROOT).as_posix()}: possible secret pattern committed")
+                break
     return errors
 
 
@@ -519,13 +612,21 @@ def main() -> int:
     print(f"[{'FAIL' if marketplace_errors else 'PASS'}] marketplace")
     all_errors.extend(marketplace_errors)
 
+    release_errors = validate_release_metadata()
+    print(f"[{'FAIL' if release_errors else 'PASS'}] release metadata")
+    all_errors.extend(release_errors)
+
     registry_errors = validate_task_type_registry()
     print(f"[{'FAIL' if registry_errors else 'PASS'}] task type registry")
     all_errors.extend(registry_errors)
 
     markdown_link_errors = validate_markdown_links()
-    print(f"[{'FAIL' if markdown_link_errors else 'PASS'}] markdown links")
+    print(f"[{'FAIL' if markdown_link_errors else 'PASS'}] markdown links and anchors")
     all_errors.extend(markdown_link_errors)
+
+    secret_errors = validate_no_secrets()
+    print(f"[{'FAIL' if secret_errors else 'PASS'}] secret scan")
+    all_errors.extend(secret_errors)
 
     if all_errors:
         print(f"\n{len(all_errors)} problem(s) found:\n", file=sys.stderr)
@@ -533,7 +634,7 @@ def main() -> int:
             print(f"  - {e}", file=sys.stderr)
         return 1
 
-    print(f"\nAll {len(skill_dirs)} skill(s), plugin metadata, registry, and links valid.")
+    print(f"\nAll {len(skill_dirs)} skill(s), plugin metadata, registry, links, and safety checks valid.")
     return 0
 
 

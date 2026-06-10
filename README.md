@@ -118,7 +118,7 @@ codex-skills-kit/
 ├── task-types.json            # task registry: skill sections, templates, examples
 ├── scripts/validate_skills.py # skill + plugin + content validator (run in CI)
 ├── CHANGELOG.md
-└── .github/workflows/         # CI: validates skills, fixtures, links, metadata
+└── .github/workflows/         # CI: validates skills, fixtures, links, safety
 ```
 
 ### codex-prompt task types
@@ -148,7 +148,7 @@ A few load-bearing principles:
 
 ## Contributing
 
-New task types, anti-patterns, and worked examples are welcome. Every `SKILL.md`, `agents/openai.yaml`, plugin manifest, task registry, and fixture change must pass the validator (`python scripts/validate_skills.py`), which CI enforces on every PR. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the skill schema and conventions, and [AGENTS.md](./AGENTS.md) for the repo conventions Codex itself reads.
+New task types, anti-patterns, and worked examples are welcome. Every `SKILL.md`, `agents/openai.yaml`, plugin manifest, task registry, and fixture change must pass the validator (`python scripts/validate_skills.py`), which CI enforces on every PR. The validator also checks release metadata, local Markdown links and anchors, and common secret patterns. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the skill schema and conventions, and [AGENTS.md](./AGENTS.md) for the repo conventions Codex itself reads.
 
 ## License
 

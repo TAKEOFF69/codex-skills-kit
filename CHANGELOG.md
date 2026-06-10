@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Extended validation to check changelog/plugin version consistency.
+- Extended Markdown validation to verify local heading anchors, not just linked files.
+- Added a built-in secret-pattern scan for common GitHub/OpenAI tokens and private keys.
+
 ## 0.2.0 - 2026-06-09
 
 - Added `task-types.json` as the source-of-truth registry for `codex-prompt` task scaffolds.

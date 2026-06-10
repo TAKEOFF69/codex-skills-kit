@@ -11,6 +11,7 @@
 - [ ] Golden prompt fixtures updated if required blocks or task scaffolds changed
 - [ ] `.codex-plugin/plugin.json` updated if plugin packaging changed
 - [ ] `CHANGELOG.md` updated for user-visible changes
+- [ ] No secrets, tokens, or private keys committed
 
 ## Skill quality
 
